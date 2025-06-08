@@ -15,7 +15,7 @@ It should be the path of the directory which contain the following files:
 
 On NixOS:
 ```bash
-nix-shell -p chez
+nix-shell -p chez libz lz4 libuuid
 export SCHEME_DIR=$(nix-instantiate --eval --expr '"${(import <nixpkgs> {}).chez}/lib/csv10.2.0/ta6le/"' | jq -r)
 ```
 

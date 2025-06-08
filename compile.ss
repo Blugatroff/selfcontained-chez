@@ -1,9 +1,19 @@
 #!/usr/bin/env -S scheme --script
 
 (let-values (((major minor point) (scheme-version-number)))
-   (if (> 10 major)
-     (eval `(define (path-build a b)
-	      (string-append a "/" b)))))
+  (if (> 10 major)
+    (eval `(define (path-build a b)
+             (string-append a "/" b)))))
+
+(define (whatever-file-exists . files)
+  (if (null? files)
+    (error 'whatever-file-exists "expected at least on file path"))
+  (call/cc (lambda (return)
+             (for-each (lambda (file)
+                         (if (file-exists? file)
+                           (return file)))
+                       files)
+             (return (car files)))))
 
 (define scheme-dir (cadr (command-line-arguments)))
 
@@ -252,9 +262,9 @@
     (run-and-log (apply string-append (map (lambda (s) (string-append s " ")) (list
               c-compiler "-o" source-file-root
               full-chez-a
-              (string-append scheme-dir "/kernel.o")
-              ; (string-append scheme-dir "/liblz4.a")
-              ; (string-append scheme-dir "/libz.a")
+              (whatever-file-exists (string-append scheme-dir "/libkernel.a") (string-append scheme-dir "/kernel.o"))
+              ; (let ((file (string-append scheme-dir "/liblz4.a"))) (if (file-exists? file) file ""))
+              ; (let ((file (string-append scheme-dir "/libz.a"))) (if (file-exists? file) file ""))
               wrapped-program-cfile
               "-m64" "-ldl" "-lm" "-lpthread" "-lz" "-llz4" "-luuid"))))
     ))
