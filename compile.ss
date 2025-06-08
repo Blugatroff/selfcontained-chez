@@ -1,5 +1,10 @@
 #!/usr/bin/env -S scheme --script
 
+(let-values (((major minor point) (scheme-version-number)))
+   (if (> 10 major)
+     (eval `(define (path-build a b)
+	      (string-append a "/" b)))))
+
 (define scheme-dir (cadr (command-line-arguments)))
 
 (if (< (length (command-line-arguments)) 3)
@@ -247,10 +252,10 @@
     (run-and-log (apply string-append (map (lambda (s) (string-append s " ")) (list
               c-compiler "-o" source-file-root
               full-chez-a
-              (string-append scheme-dir "/libkernel.a")
-              (string-append scheme-dir "/liblz4.a")
-              (string-append scheme-dir "/libz.a")
+              (string-append scheme-dir "/kernel.o")
+              ; (string-append scheme-dir "/liblz4.a")
+              ; (string-append scheme-dir "/libz.a")
               wrapped-program-cfile
-              "-m64" "-ldl" "-lm" "-lpthread"))))
+              "-m64" "-ldl" "-lm" "-lpthread" "-lz" "-llz4" "-luuid"))))
     ))
 

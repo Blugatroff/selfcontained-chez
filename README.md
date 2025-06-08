@@ -19,6 +19,11 @@ nix-shell -p chez
 export SCHEME_DIR=$(nix-instantiate --eval --expr '"${(import <nixpkgs> {}).chez}/lib/csv10.2.0/ta6le/"' | jq -r)
 ```
 
+On Debian:
+```bash
+sudo apt install chezscheme chezscheme-dev uuid-dev
+```
+
 ## Usage
 ```bash
 ./compile.ss gcc $SCHEME_DIR ./main.ss
