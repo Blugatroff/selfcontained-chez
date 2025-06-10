@@ -264,6 +264,6 @@
               ; (let ((file (string-append scheme-dir "/liblz4.a"))) (if (file-exists? file) file ""))
               ; (let ((file (string-append scheme-dir "/libz.a"))) (if (file-exists? file) file ""))
               wrapped-program-cfile
-              "-m64" "-ldl" "-lm" "-lpthread" "-lz" "-llz4" "-luuid"))))
+              "-fno-lto" "-m64" "-ldl" "-lm" "-lpthread" "-lz" "-llz4" "-luuid"))))
     ))
 
