@@ -9,8 +9,8 @@ jobs:
         sudo apt install -y chezscheme chezscheme-dev uuid-dev
     - name: Compile main.ss
       run: |
-        export SCHEME_DIR=/usr/lib/csv*/ta6le/
-        ./compile.ss gcc $SCHEME_DIR ./main.ss
+        export SCHEME_DIRS=$(echo /usr/lib/csv*/ta6le/)
+        ./compile.ss ./main.ss
     - name: Run result
       run: |
         ldd ./main

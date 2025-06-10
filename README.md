@@ -5,27 +5,28 @@ by stripping away everything, that is non-essential for my usecase, and merging 
 into a single scheme script.
 
 ## Environment variables
-The SCHEME_DIR environment variable needs to be set to run `compile.ss`.
-It should be the path of the directory which contain the following files:
+The SCHEME_DIRS environment variable needs to be set to run `compile.ss`.
+It should be the path of the directories which contain the following files:
 - `scheme.h`
 - `scheme.boot`
 - `petite.boot`
-- `liblz4.a`
-- `libz.a`
+- `kernel.o` or `libkernel.a`
+- `liblz4.a` (optional)
+- `libz.a` (optional)
 
 On NixOS:
 ```bash
 nix-shell -p chez libz lz4 libuuid
-export SCHEME_DIR=$(nix-instantiate --eval --expr '"${(import <nixpkgs> {}).chez}/lib/csv10.2.0/ta6le/"' | jq -r)
+export SCHEME_DIRS=$(nix-instantiate --eval --expr '"${(import <nixpkgs> {}).chez}/lib/csv10.2.0/ta6le/"' | jq -r)
 ```
 
 On Debian:
 ```bash
 sudo apt install chezscheme chezscheme-dev uuid-dev
-export SCHEME_DIR=/usr/lib/csv*/ta6le/
+export SCHEME_DIRS=$(echo /usr/lib/csv*/ta6le/)
 ```
 
 ## Usage
 ```bash
-./compile.ss gcc $SCHEME_DIR ./main.ss
+./compile.ss ./main.ss
 ```

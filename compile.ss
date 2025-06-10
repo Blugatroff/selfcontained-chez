@@ -5,6 +5,30 @@
     (eval `(define (path-build a b)
              (string-append a "/" b)))))
 
+(define (list-split sep l)
+  (define (go split remaining)
+    (cond
+      [(null? remaining) (list (reverse split))]
+      [(equal? sep (car remaining)) (cons (reverse split) (go '() (cdr remaining)))]
+      [else (go (cons (car remaining) split) (cdr remaining))]))
+  (go '() l))
+
+(define (string-split sep s)
+  (map list->string (list-split sep (string->list s))))
+
+(define (or-default default thunk)
+  (guard (ex [(error? ex) (default)]) (thunk)))
+
+(define (whichever-works . thunks)
+  (if (null? thunks)
+    (error 'whichever-works "Expected at least one thunk"))
+  (if (null? (cdr thunks))
+        ((car thunks)))
+  (or-default
+    (lambda ()
+      (apply whichever-works (cdr thunks)))
+    (car thunks)))
+
 (define (whatever-file-exists . files)
   (if (null? files)
     (error 'whatever-file-exists "expected at least on file path"))
@@ -13,25 +37,38 @@
                          (if (file-exists? file)
                            (return file)))
                        files)
-             (return (car files)))))
+             (error 'whatever-file-exists
+                    (with-output-to-string (lambda ()
+                                             (display "None of these files found: ")
+                                             (display files)))))))
+(define cc
+  (let ((cc (getenv "CC")))
+    (if (not cc) "gcc" cc)))
 
-(if (< (length (command-line-arguments)) 3)
+(define scheme-dirs
+  (let ((scheme-dirs (getenv "SCHEME_DIRS")))
+    (if (not scheme-dirs)
+      (begin
+          (display "SCHEME_DIRS environment variable missing\n") (current-error-port)
+          (exit)))
+    (string-split #\: scheme-dirs)))
+
+(define (lookup-in-scheme-dirs file)
+  (apply whatever-file-exists
+         (map
+           (lambda (dir) (path-build dir file))
+           scheme-dirs)))
+
+(if (< (length (command-line-arguments)) 1)
   (begin
     (display "Missing arguments, expected:\n")
-    (display "  ./compile.ss <c-compiler> <scheme-dir> <source-file>")))
+    (display "  ./compile.ss <source-file>")))
 
-(define c-compiler  (car   (command-line-arguments)))
-(define scheme-dir  (cadr  (command-line-arguments)))
-(define source-file (caddr (command-line-arguments)))
+(define source-file (car (command-line-arguments)))
 
 (define source-file-root (path-root source-file))
 
-(if (eq? #f scheme-dir)
-  (begin
-    (display "SCHEME_DIR environment variable missing\n" (current-error-port))
-    (exit 1)))
-
-(display scheme-dir) (newline)
+(define scheme-header-file (lookup-in-scheme-dirs "scheme.h"))
 
 (define (run cmd)
   (let-values (((stdin stdout stderr pid) (open-process-ports
@@ -164,8 +201,8 @@
     (define wrapped-program-cfile (path-build tempdir "program.generated.c"))
     (define embedding-code-file (path-build tempdir "embedding.c"))
     (define embedding-o (path-build tempdir "embedding.o"))
-    (define petite-boot-file (string-append scheme-dir "/petite.boot"))
-    (define scheme-boot-file (string-append scheme-dir "/scheme.boot"))
+    (define petite-boot-file (lookup-in-scheme-dirs "/petite.boot"))
+    (define scheme-boot-file (lookup-in-scheme-dirs "/scheme.boot"))
     (define petite-custom-boot-file (path-build tempdir "petite.boot"))
     (define scheme-custom-boot-file (path-build tempdir "scheme.boot"))
     (define petite-boot-c (path-build tempdir "petite_boot.c"))
@@ -198,32 +235,21 @@
                 (load-program fn))))))
       '(replace))
 
-    ; (display "making custom petite boot file\n")
-    ; (apply make-boot-file
-    ;   petite-custom-boot-file
-    ;   '()
-    ;   (list petite-boot-file custom-boot-file))
-
-    (display "making custom full-chez boot file\n")
     (apply make-boot-file
       scheme-custom-boot-file
       '()
       (list petite-boot-file scheme-boot-file custom-boot-file))
 
-    ; (with-output-to-file petite-boot-c
-    ;                      (lambda () (write-c-datafile name-of-embedded-code petite-custom-boot-file))
-    ;                      '(replace))
     (with-output-to-file scheme-boot-c
                          (lambda () (write-c-datafile name-of-embedded-code scheme-custom-boot-file))
                          '(replace))
 
     (with-output-to-file embedding-code-file (lambda () (display embedding-code)) '(replace))
 
-    ; (run-and-log (string-append "gcc -c -o " petite-boot-o " " petite-boot-c " -I" scheme-dir))
-    (run-and-log (string-append "gcc -c -o " scheme-boot-o " " scheme-boot-c " -I" scheme-dir))
-    (run-and-log (string-append "gcc -c -o " embedding-o " -x c " embedding-code-file " -I" scheme-dir))
+    (let ((scheme-header-dir (path-parent scheme-header-file)))
+      (run-and-log (string-append "gcc -c -o " scheme-boot-o " " scheme-boot-c " -I" scheme-header-dir))
+      (run-and-log (string-append "gcc -c -o " embedding-o " -x c " embedding-code-file " -I" scheme-header-dir)))
 
-    ; (run-and-log (string-append "ar rcs " petite-a    " " petite-boot-o " " embedding-o))
     (run-and-log (string-append "ar rcs " full-chez-a " " scheme-boot-o " " embedding-o))
 
     (compile-library-handler
@@ -258,12 +284,18 @@
       '(replace))
 
     (run-and-log (apply string-append (map (lambda (s) (string-append s " ")) (list
-              c-compiler "-o" source-file-root
+              cc "-o" source-file-root
               full-chez-a
-              (whatever-file-exists (string-append scheme-dir "/libkernel.a") (string-append scheme-dir "/kernel.o"))
-              ; (let ((file (string-append scheme-dir "/liblz4.a"))) (if (file-exists? file) file ""))
-              ; (let ((file (string-append scheme-dir "/libz.a"))) (if (file-exists? file) file ""))
+              (whichever-works
+                (lambda () (lookup-in-scheme-dirs "libkernel.a"))
+                (lambda () (lookup-in-scheme-dirs "kernel.o")))
+              (whichever-works
+                (lambda () (lookup-in-scheme-dirs "libz.a"))
+                (lambda () "-lz"))
+              (whichever-works
+                (lambda () (lookup-in-scheme-dirs "liblz4.a"))
+                (lambda () "-llz4"))
               wrapped-program-cfile
-              "-fno-lto" "-m64" "-ldl" "-lm" "-lpthread" "-lz" "-llz4" "-luuid"))))
+              "-fno-lto" "-m64" "-ldl" "-lm" "-lpthread" "-luuid"))))
     ))
 
