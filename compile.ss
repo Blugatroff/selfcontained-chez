@@ -15,8 +15,6 @@
                        files)
              (return (car files)))))
 
-(define scheme-dir (cadr (command-line-arguments)))
-
 (if (< (length (command-line-arguments)) 3)
   (begin
     (display "Missing arguments, expected:\n")

@@ -22,6 +22,7 @@ export SCHEME_DIR=$(nix-instantiate --eval --expr '"${(import <nixpkgs> {}).chez
 On Debian:
 ```bash
 sudo apt install chezscheme chezscheme-dev uuid-dev
+export SCHEME_DIR=/usr/lib/csv*/ta6le/
 ```
 
 ## Usage
