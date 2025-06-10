@@ -62,7 +62,8 @@
 (if (< (length (command-line-arguments)) 1)
   (begin
     (display "Missing arguments, expected:\n")
-    (display "  ./compile.ss <source-file>")))
+    (display "  ./compile.ss <source-file>")
+    (exit 1)))
 
 (define source-file (car (command-line-arguments)))
 

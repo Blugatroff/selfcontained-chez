@@ -14,12 +14,6 @@ It should be the path of the directories which contain the following files:
 - `liblz4.a` (optional)
 - `libz.a` (optional)
 
-On NixOS:
-```bash
-nix-shell -p chez libz lz4 libuuid
-export SCHEME_DIRS=$(nix-instantiate --eval --expr '"${(import <nixpkgs> {}).chez}/lib/csv10.2.0/ta6le/"' | jq -r)
-```
-
 On Debian:
 ```bash
 sudo apt install chezscheme chezscheme-dev uuid-dev
@@ -30,3 +24,9 @@ export SCHEME_DIRS=$(echo /usr/lib/csv*/ta6le/)
 ```bash
 ./compile.ss ./main.ss
 ```
+
+## Using the flake
+```bash
+nix run github:Blugatroff/selfcontained-chez
+```
+
