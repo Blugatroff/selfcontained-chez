@@ -289,7 +289,9 @@
               full-chez-a
               (whichever-works
                 (lambda () (lookup-in-scheme-dirs "libkernel.a"))
-                (lambda () (lookup-in-scheme-dirs "kernel.o")))
+                (lambda () (string-append
+			     (lookup-in-scheme-dirs "kernel.o")
+			     " -luuid")))
               (whichever-works
                 (lambda () (lookup-in-scheme-dirs "libz.a"))
                 (lambda () "-lz"))
@@ -297,6 +299,6 @@
                 (lambda () (lookup-in-scheme-dirs "liblz4.a"))
                 (lambda () "-llz4"))
               wrapped-program-cfile
-              "-fno-lto" "-m64" "-ldl" "-lm" "-lpthread" "-luuid"))))
+              "-fno-lto" "-m64" "-ldl" "-lm" "-lpthread"))))
     ))
 
