@@ -202,16 +202,12 @@
     (define wrapped-program-cfile (path-build tempdir "program.generated.c"))
     (define embedding-code-file (path-build tempdir "embedding.c"))
     (define embedding-o (path-build tempdir "embedding.o"))
-    (define petite-boot-file (lookup-in-scheme-dirs "/petite.boot"))
     (define scheme-boot-file (lookup-in-scheme-dirs "/scheme.boot"))
-    (define petite-custom-boot-file (path-build tempdir "petite.boot"))
+    (define petite-boot-file (lookup-in-scheme-dirs "/petite.boot"))
     (define scheme-custom-boot-file (path-build tempdir "scheme.boot"))
-    (define petite-boot-c (path-build tempdir "petite_boot.c"))
     (define scheme-boot-c (path-build tempdir "scheme_boot.c"))
-    (define petite-boot-o (path-build tempdir "petite_boot.o"))
     (define scheme-boot-o (path-build tempdir "scheme_boot.o"))
-    (define petite-a    (path-build tempdir "petite.a"))
-    (define full-chez-a (path-build tempdir "full-chez.a"))
+    (define full-chez-a "/tmp/selfcontained-chez/full-chez.a")
     (define program-wpo  (string-append source-file-root ".wpo"))
     (define program-so   (string-append source-file-root ".so"))
     (define program-chez (path-build tempdir "program.chez"))
@@ -241,17 +237,19 @@
       '()
       (list petite-boot-file scheme-boot-file custom-boot-file))
 
-    (with-output-to-file scheme-boot-c
-                         (lambda () (write-c-datafile name-of-embedded-code scheme-custom-boot-file))
-                         '(replace))
-
     (with-output-to-file embedding-code-file (lambda () (display embedding-code)) '(replace))
 
     (let ((scheme-header-dir (path-parent scheme-header-file)))
-      (run-and-log (string-append "gcc -c -o " scheme-boot-o " " scheme-boot-c " -I" scheme-header-dir))
-      (run-and-log (string-append "gcc -c -o " embedding-o " -x c " embedding-code-file " -I" scheme-header-dir)))
+      (unless (file-exists? full-chez-a)
+        (unless (file-exists? "/tmp/selfcontained-chez")
+           (mkdir "/tmp/selfcontained-chez"))
 
-    (run-and-log (string-append "ar rcs " full-chez-a " " scheme-boot-o " " embedding-o))
+        (with-output-to-file scheme-boot-c
+                             (lambda () (write-c-datafile name-of-embedded-code scheme-custom-boot-file))
+                             '(replace))
+        (run-and-log (string-append "gcc -c -o " scheme-boot-o " " scheme-boot-c " -I" scheme-header-dir))
+        (run-and-log (string-append "gcc -c -o " embedding-o " -x c " embedding-code-file " -I" scheme-header-dir))
+        (run-and-log (string-append "ar rcs " full-chez-a " " scheme-boot-o " " embedding-o))))
 
     (compile-library-handler
       (lambda (source-file object-file)
@@ -290,8 +288,8 @@
               (whichever-works
                 (lambda () (lookup-in-scheme-dirs "libkernel.a"))
                 (lambda () (string-append
-			     (lookup-in-scheme-dirs "kernel.o")
-			     " -luuid")))
+                 (lookup-in-scheme-dirs "kernel.o")
+                 " -luuid")))
               (whichever-works
                 (lambda () (lookup-in-scheme-dirs "libz.a"))
                 (lambda () "-lz"))
