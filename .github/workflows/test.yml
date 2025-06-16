@@ -10,9 +10,9 @@ jobs:
     - name: Compile main.ss
       run: |
         export SCHEME_DIRS=$(echo /usr/lib/csv*/ta6le/)
-        ./compile.ss ./main.ss
+        ./compile.scm ./examples/hello.scm
     - name: Run result
       run: |
-        ldd ./main
-        ./main
+        ldd ./examples/hello
+        ./examples/hello
 

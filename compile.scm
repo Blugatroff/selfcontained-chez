@@ -64,6 +64,12 @@
            (lambda (dir) (path-build dir file))
            scheme-dirs)))
 
+(define clean (member "--clean" (command-line-arguments)))
+(command-line-arguments
+  (filter
+    (lambda (arg) (not (equal? "--clean" arg)))
+    (command-line-arguments)))
+
 (if (< (length (command-line-arguments)) 1)
   (begin
     (display "Missing arguments, expected:\n")
@@ -272,13 +278,14 @@
 
     (set! produced-object-files (cons program-so produced-object-files))
 
-    (for-each
-      (lambda (path)
-        (delete-file path #t)
-        (let ((wpo-file (string-append (path-root path) ".wpo")))
-          (if (file-exists? wpo-file)
-            (delete-file wpo-file #t))))
-      produced-object-files)
+    (if clean
+      (for-each
+        (lambda (path)
+          (delete-file path #t)
+          (let ((wpo-file (string-append (path-root path) ".wpo")))
+            (if (file-exists? wpo-file)
+              (delete-file wpo-file #t))))
+        produced-object-files))
 
     (with-output-to-file wrapped-program-cfile
       (lambda ()

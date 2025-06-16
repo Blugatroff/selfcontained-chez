@@ -6,7 +6,7 @@
     outputs = { self, nixpkgs, flake-utils }:
         flake-utils.lib.eachDefaultSystem (system: let
             pkgs = import nixpkgs { inherit system; };
-            buildInputs = with pkgs; [ chez libz lz4 libuuid ];
+            buildInputs = with pkgs; [ libz lz4 libuuid ];
 
             selfcontained-chez = pkgs.stdenv.mkDerivation {
                 inherit buildInputs;
@@ -15,10 +15,10 @@
                 buildPhase = '''';
                 installPhase = ''
                     mkdir -p $out/bin
-                    cp ./compile.ss $out/bin/
+                    cp ./compile.scs $out/bin/
                     echo "#!/usr/bin/env sh" > $out/bin/selfcontained-chez
                     echo "export SCHEME_DIRS=$(echo ${pkgs.chez}/lib/csv*/ta6le/)" >> $out/bin/selfcontained-chez
-                    echo "${pkgs.chez}/bin/scheme --script $out/bin/compile.ss \"\''${@:1}\"" >> $out/bin/selfcontained-chez
+                    echo "${pkgs.chez}/bin/scheme --script $out/bin/compile.scm \"\''${@:1}\"" >> $out/bin/selfcontained-chez
                     chmod +x $out/bin/selfcontained-chez
                 '';
             };
