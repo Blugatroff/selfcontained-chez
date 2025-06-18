@@ -15,7 +15,7 @@
                 buildPhase = '''';
                 installPhase = ''
                     mkdir -p $out/bin
-                    cp ./compile.scs $out/bin/
+                    cp ./compile.scm $out/bin/
                     echo "#!/usr/bin/env sh" > $out/bin/selfcontained-chez
                     echo "export SCHEME_DIRS=$(echo ${pkgs.chez}/lib/csv*/ta6le/)" >> $out/bin/selfcontained-chez
                     echo "${pkgs.chez}/bin/scheme --script $out/bin/compile.scm \"\''${@:1}\"" >> $out/bin/selfcontained-chez
