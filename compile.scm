@@ -135,13 +135,10 @@
 "extern const unsigned scheme_program_size;"
 "extern void register_symbols();"
 
-"char bootfilename[] = \"/tmp/chezschemebootXXXXXX\";"
 "char schemefilename[] = \"/tmp/schemeprogramXXXXXX\";"
-"const char *cleanup_bootfile = 0;"
 "const char *cleanup_schemefile = 0;"
 
 "void cleanup(void) {"
-  "if (cleanup_bootfile) unlink(bootfilename);"
   "if (cleanup_schemefile) unlink(schemefilename);"
 "}"
 
@@ -166,31 +163,25 @@
   "register_symbols();"
 "}"
 
-"int run_program(int argc, const char **argv, const char *bootfilename, const char *schemefilename) {"
+"int run_program(int argc, const char **argv, const char *schemefilename) {"
   "argv0 = argv[0];"
   "Sscheme_init(0);"
-  "Sregister_boot_file(bootfilename);"
+  (string-append "Sregister_boot_file_bytes(argv[0], (void*)&" name-of-embedded-code ", " name-of-embedded-code "_size);")
   "Sbuild_heap(0, custom_init);"
   "return Sscheme_program(schemefilename, argc, argv);"
 "}"
 
-
-
 "int main(int argc, const char **argv) {"
-  "int bootfd;"
   "int schemefd;"
   "int ret;"
 
   "atexit(cleanup);"
 
-  (string-append "bootfd = maketempfile(bootfilename, &" name-of-embedded-code ", " name-of-embedded-code "_size);")
-  "cleanup_bootfile = bootfilename;"
   "schemefd = maketempfile(schemefilename, &scheme_program, scheme_program_size);"
   "cleanup_schemefile = schemefilename;"
 
-  "ret = run_program(argc, argv, bootfilename, schemefilename);"
+  "ret = run_program(argc, argv, schemefilename);"
 
-  "close(bootfd);"
   "close(schemefd);"
 
   "return ret;"
