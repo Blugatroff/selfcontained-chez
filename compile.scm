@@ -202,15 +202,7 @@
 (with-temp-directories
   (lambda (create-tempdir)
     (define tempdir (create-tempdir))
-    (define custom-boot-file (path-build tempdir "custom-boot.ss"))
     (define wrapped-program-cfile (path-build tempdir "program.generated.c"))
-    (define embedding-code-file (path-build tempdir "embedding.c"))
-    (define embedding-o (path-build tempdir "embedding.o"))
-    (define scheme-boot-file (lookup-in-scheme-dirs "/scheme.boot"))
-    (define petite-boot-file (lookup-in-scheme-dirs "/petite.boot"))
-    (define scheme-custom-boot-file (path-build tempdir "scheme.boot"))
-    (define scheme-boot-c (path-build tempdir "scheme_boot.c"))
-    (define scheme-boot-o (path-build tempdir "scheme_boot.a"))
     (define full-chez-a "/tmp/selfcontained-chez/full_chez.a")
     (define program-wpo  (string-append source-file-root ".wpo"))
     (define program-so   (string-append source-file-root ".so"))
@@ -223,37 +215,48 @@
         (format #t "const uint8_t ~a[] = {~{0x~x,~}};~n" array-name data)
         (format #t "const unsigned int ~a_size = sizeof(~a);~n" array-name array-name)))
 
-    (with-output-to-file
-      custom-boot-file
-      (lambda ()
-        (write
-          '(let ([program-name
-                 (foreign-procedure "program_name" () string)])
-            (scheme-program
-              (lambda (fn . fns)
-                (command-line (cons (program-name) fns))
-                (command-line-arguments fns)
-                (load-program fn))))))
-      '(replace))
-
-    (apply make-boot-file
-      scheme-custom-boot-file
-      '()
-      (list petite-boot-file scheme-boot-file custom-boot-file))
-
-    (with-output-to-file embedding-code-file (lambda () (display embedding-code)) '(replace))
-
-    (let ((scheme-header-dir (path-parent scheme-header-file)))
+    (let ([scheme-header-dir (path-parent scheme-header-file)]
+          [custom-entry-file (path-build tempdir "custom-boot.ss")]
+          [custom-boot-file (path-build tempdir "custom.boot")]
+          [custom-boot-c (path-build tempdir "custom_boot.c")]
+          [custom-boot-o (path-build tempdir "custom_boot.o")]
+          [scheme-boot-file (lookup-in-scheme-dirs "/scheme.boot")]
+          [petite-boot-file (lookup-in-scheme-dirs "/petite.boot")]
+          [embedding-c (path-build tempdir "embedding.c")]
+          [embedding-o (path-build tempdir "embedding.o")])
       (unless (file-exists? full-chez-a)
         (unless (file-exists? "/tmp/selfcontained-chez")
            (mkdir "/tmp/selfcontained-chez"))
 
-        (with-output-to-file scheme-boot-c
-                             (lambda () (write-c-datafile name-of-embedded-code scheme-custom-boot-file))
+        (with-output-to-file
+          custom-entry-file
+          (lambda ()
+            (write
+              '(let ([program-name
+                     (foreign-procedure "program_name" () string)])
+                (scheme-program
+                  (lambda (fn . fns)
+                    (command-line (cons (program-name) fns))
+                    (command-line-arguments fns)
+                    (load-program fn))))))
+          '(replace))
+
+        (apply make-boot-file
+          custom-boot-file
+          '()
+          (list petite-boot-file scheme-boot-file custom-entry-file))
+
+        (fasl-compressed #t) ; true is the default
+        (vfasl-convert-file custom-boot-file custom-boot-file '())
+
+        (with-output-to-file embedding-c (lambda () (display embedding-code)) '(replace))
+
+        (with-output-to-file custom-boot-c
+                             (lambda () (write-c-datafile name-of-embedded-code custom-boot-file))
                              '(replace))
-        (run-and-log (string-append "gcc -c -o " scheme-boot-o " " scheme-boot-c " -I" scheme-header-dir))
-        (run-and-log (string-append "gcc -c -o " embedding-o " -x c " embedding-code-file " -I" scheme-header-dir))
-        (run-and-log (string-append "ar rcs " full-chez-a " " scheme-boot-o " " embedding-o))))
+        (run-and-log (string-append "gcc -c -o " custom-boot-o " " custom-boot-c " -I" scheme-header-dir))
+        (run-and-log (string-append "gcc -c -o " embedding-o " -x c " embedding-c " -I" scheme-header-dir))
+        (run-and-log (string-append "ar rcs " full-chez-a " " custom-boot-o " " embedding-o))))
 
     (compile-library-handler
       (lambda (source-file object-file)
