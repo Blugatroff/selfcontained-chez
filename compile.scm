@@ -1,5 +1,4 @@
-#!/usr/bin/env -S scheme --program
-(import (chezscheme))
+#!/usr/bin/env -S scheme --script
 
 (define is-atleast-10
   (let-values (((major minor point) (scheme-version-number)))
