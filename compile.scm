@@ -1,9 +1,13 @@
-#!/usr/bin/env -S scheme --script
+#!/usr/bin/env -S scheme --program
+(import (chezscheme))
 
-(let-values (((major minor point) (scheme-version-number)))
-  (if (> 10 major)
-    (eval `(define (path-build a b)
-             (string-append a "/" b)))))
+(define is-atleast-10
+  (let-values (((major minor point) (scheme-version-number)))
+    (<= 10 major)))
+
+(if (not is-atleast-10)
+  (eval `(define (path-build a b)
+           (string-append a "/" b))))
 
 (define (list-split sep l)
   (define (go split remaining)
@@ -135,10 +139,16 @@
 "extern const unsigned scheme_program_size;"
 "extern void register_symbols();"
 
+(if is-atleast-10
+  ""
+  "char bootfilename[] = \"/tmp/bootfileXXXXXX\";\nconst char *cleanup_bootfile = 0;")
 "char schemefilename[] = \"/tmp/schemeprogramXXXXXX\";"
 "const char *cleanup_schemefile = 0;"
 
 "void cleanup(void) {"
+  (if is-atleast-10
+    ""
+    "if (cleanup_bootfile) unlink(bootfilename);")
   "if (cleanup_schemefile) unlink(schemefilename);"
 "}"
 
@@ -163,25 +173,32 @@
   "register_symbols();"
 "}"
 
-"int run_program(int argc, const char **argv, const char *schemefilename) {"
+"int run_program(int argc, const char **argv) {"
   "argv0 = argv[0];"
   "Sscheme_init(0);"
-  (string-append "Sregister_boot_file_bytes(argv[0], (void*)&" name-of-embedded-code ", " name-of-embedded-code "_size);")
+  (if is-atleast-10
+    (string-append "Sregister_boot_file_bytes(argv[0], (void*)&" name-of-embedded-code ", " name-of-embedded-code "_size);")
+    "Sregister_boot_file(bootfilename);")
   "Sbuild_heap(0, custom_init);"
   "return Sscheme_program(schemefilename, argc, argv);"
 "}"
 
 "int main(int argc, const char **argv) {"
   "int schemefd;"
+  (if is-atleast-10 "" "int bootfd;")
   "int ret;"
 
   "atexit(cleanup);"
 
+  (if is-atleast-10
+    ""
+    (string-append "bootfd = maketempfile(bootfilename, &" name-of-embedded-code ", " name-of-embedded-code "_size);"))
   "schemefd = maketempfile(schemefilename, &scheme_program, scheme_program_size);"
   "cleanup_schemefile = schemefilename;"
 
-  "ret = run_program(argc, argv, schemefilename);"
+  "ret = run_program(argc, argv);"
 
+  (if is-atleast-10 "" "close(bootfd);")
   "close(schemefd);"
 
   "return ret;"
@@ -247,7 +264,8 @@
           (list petite-boot-file scheme-boot-file custom-entry-file))
 
         (fasl-compressed #t) ; true is the default
-        (vfasl-convert-file custom-boot-file custom-boot-file '())
+        (if is-atleast-10
+          (vfasl-convert-file custom-boot-file custom-boot-file '()))
 
         (with-output-to-file embedding-c (lambda () (display embedding-code)) '(replace))
 
