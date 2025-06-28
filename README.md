@@ -36,9 +36,9 @@ Every symbol name in the comma separated list, gets registered using [*Sregister
 
 Every additional argument to compile.ss after the entry point is passed along to gcc.
 
-Here is an example using for exposing [Raylib](https://www.raylib.com/) functions:
+Here is an example using `FOREIGN_SYMBOLS` for exposing [Raylib](https://www.raylib.com/) functions:
 ```bash
-FOREIGN_SYMBOLS=InitWindow,SetTargetFPS,WindowShouldClose,BeginDrawing,EndDrawing,ClearBackground,CloseWindow \
+FOREIGN_SYMBOLS=InitWindow,SetTargetFPS,WindowShouldClose,BeginDrawing,EndDrawing,ClearBackground,CloseWindow,DrawCircleV \
   ./compile.scm ./examples/raylib.scm -lraylib
 
 ./examples/raylib
